@@ -38,7 +38,9 @@ const employeeSchema = mongoose.Schema({
             ref: "roleModel",
             default:"672f5ac5c6665fc51d7902f3"
         }
-    ]
+    ],
+    resetPasswordToken: String, // Token for resetting password
+    resetPasswordExpires: Date, // Expiry for reset token
 },  
     {
         timestamps: true

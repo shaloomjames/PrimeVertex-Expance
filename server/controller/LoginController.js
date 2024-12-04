@@ -4,6 +4,9 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
+// @Request   POST
+// @Route     http://localhost:5000/api/employee/login
+// @Access    Private
 const loginController = async (req, res) => {
   try {
     const { employeeEmail, employeePassword } = req.body;
@@ -67,4 +70,6 @@ const loginController = async (req, res) => {
   }
 };
 
-module.exports = loginController;
+
+
+module.exports = {loginController};

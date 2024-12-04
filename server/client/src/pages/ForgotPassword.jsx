@@ -5,11 +5,8 @@ import Cookies from 'js-cookie';     // Corrected to js-cookie
 import Swal from 'sweetalert2'; // Import SweetAlert2
 import { Link, useNavigate } from 'react-router-dom';
 
-const Login = () => {
+const ForgotPassword = () => {
     const [employeeEmail, setEmployeeEmail] = useState('');
-    const [employeePassword, setEmployeePassword] = useState('');
-    const [passwordVisible, setPasswordVisible] = useState(false); // State to toggle password visibility
-
 
     const navigate = useNavigate();
 
@@ -46,7 +43,6 @@ const Login = () => {
         e.preventDefault();
         const formData = {
             employeeEmail,
-            employeePassword,
         };
 
         try {
@@ -74,7 +70,8 @@ const Login = () => {
                     {`
                        input::placeholder {
     color: #d6d6d6 !important; /* Change this to the color you want */
-}
+},
+
 
                     `}
                 </style>
@@ -85,10 +82,11 @@ const Login = () => {
                                 <div className="card login-form mb-0" style={{ backgroundColor: "rgb(255 255 255 / 19%)" }}>
                                     <div className="card-body pt-5">
                                         <a className="text-center" href="index.html">
-                                            {/* <h4>Prime Vertex</h4> */}
                                             <h4><img src="/images/Primevertex--Logo-light.png" alt="" /></h4>
                                         </a>
                                         <form className="mt-5 mb-5 login-input" onSubmit={handleSubmit}>
+                                            <h4  style={{color:"white",fontWeight:"500"}}>Enter your email address and we will send you Password Reset Link</h4>
+                                            <br />
                                             <div className="form-group">
                                                 <input
                                                     style={{ color: "white" }}
@@ -99,33 +97,11 @@ const Login = () => {
                                                     onChange={(e) => setEmployeeEmail(e.target.value)}
                                                 />
                                             </div>
-                                            <div className="form-group">
-                                                <input style={{ color: "white" }}
-                                                    type={`${passwordVisible ? "text" : "password"}`}
-                                                    className="form-control"
-                                                    placeholder="Password"
-                                                    value={employeePassword}
-                                                    onChange={(e) => setEmployeePassword(e.target.value)}
-                                                />
-                                                                                                <span
-                                                    onClick={() => setPasswordVisible(!passwordVisible)} // Toggle visibility state
-                                                    style={{
-                                                        position: "absolute",
-                                                        right: "40px",
-                                                        top: "56%",
-                                                        transform: "translateY(-50%)",
-                                                        cursor: "pointer",
-                                                        color: "white",
-                                                    }}
-                                                >
-                                                    <i className={`fa-solid ${passwordVisible ? "fa-eye" :"fa-eye-slash" }`}></i>
-                                                </span>
-                                            </div>
                                             <button className="btn login-form__btn  submit w-100" type="submit" style={{ backgroundColor: "#0d6efd" }}>
-                                                Log In
+                                                Send Email
                                             </button>
-                                       <span className='btn'>
-                                         <Link to="/forgotpassword" style={{color:"white",fontWeight:"700"}} >forgot password</Link>
+                                            <span className='btn'>
+                                         <Link  to="/login" style={{color:"white",fontWeight:"800"}} >Login page?</Link>
                                         </span>
                                         </form>
                                     </div>
@@ -139,5 +115,5 @@ const Login = () => {
     );
 };
 
-export default Login;
+export default ForgotPassword;
 // Shaloom@12345

@@ -247,11 +247,12 @@ const ShowDeletedEmployee = () => {
                             <td>{employee.employeeSalary || "N/A"}</td>
                             <td style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                               <span>
+                              <span>
                                 <button
                                   data-toggle="tooltip"
                                   data-placement="top"
                                   title="Restore"
-                                  className="btn btn-success btn-sm mt-2 mx-2"
+                                  className="btn btn-success btn-sm mt-2 mx-3"
                                   onClick={() => restoreEmployee(employee._id)}
                                 >
                                   <i className="fa fa-undo"></i> Restore
@@ -268,7 +269,7 @@ const ShowDeletedEmployee = () => {
                                 >
                                   <i className="fa fa-trash"></i>
                                 </button>
-                                
+                              </span>
                               </span>
                             </td>
                           </tr>

@@ -3,6 +3,7 @@ const employeeModel = require("../models/EmployeeModel");
 const RoleModel = require("../models/RoleModel");
 const bcrypt = require("bcrypt");
 const { SendMail } = require("../helpers/SendMail");
+const crypto = require("crypto");
 const deletedEmployeeModel = require("../models/DeletedEmployees");
 
 // @Request   GET
@@ -51,6 +52,9 @@ const getSingleEmployee = async (req, res) => {
     }
 };
 
+// @Request   POST
+// @Route     http://localhost:5000/api/employee/
+// @Access    Private
 const createEmployee = async (req, res) => {
     try {
         const { employeeName, employeeEmail, employeePassword, employeeSalary, employeeRoles } = req.body;
@@ -95,23 +99,23 @@ const createEmployee = async (req, res) => {
         //     return res.status(400).json({ err: "Employee with this email already exists In our DB." });
         // }
 
-                // Check if email already exists in the deletedEmployeeModel
-                const existingEmployeeInDelete = await deletedEmployeeModel.findOne({ employeeEmail });
-                if (existingEmployeeInDelete) {
-                    return res.status(400).json({ err: "Employee with this email already exists in our deleted employees database." });
-                }
-        
-                // Validate if each role exists in the Role collection
-                const roles = await RoleModel.find({ _id: { $in: employeeRoles } });
-                if (roles.length !== employeeRoles.length) {
-                    return res.status(400).json({ err: "One or more roles do not exist." });
-                }
-        
-                // Check if the email already exists in the active employees collection
-                const existingEmployee = await employeeModel.findOne({ employeeEmail });
-                if (existingEmployee) {
-                    return res.status(400).json({ err: "Employee with this email already exists." });
-                }
+        // Check if email already exists in the deletedEmployeeModel
+        const existingEmployeeInDelete = await deletedEmployeeModel.findOne({ employeeEmail });
+        if (existingEmployeeInDelete) {
+            return res.status(400).json({ err: "Employee with this email already exists in our deleted employees database." });
+        }
+
+        // Validate if each role exists in the Role collection
+        const roles = await RoleModel.find({ _id: { $in: employeeRoles } });
+        if (roles.length !== employeeRoles.length) {
+            return res.status(400).json({ err: "One or more roles do not exist." });
+        }
+
+        // Check if the email already exists in the active employees collection
+        const existingEmployee = await employeeModel.findOne({ employeeEmail });
+        if (existingEmployee) {
+            return res.status(400).json({ err: "Employee with this email already exists." });
+        }
 
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(employeePassword, salt);
@@ -124,8 +128,8 @@ const createEmployee = async (req, res) => {
             employeeRoles,
         });
 
-         // Extract role names for the email
-         const roleNames = roles.map(role => role.roleName).join(", ");
+        // Extract role names for the email
+        const roleNames = roles.map(role => role.roleName).join(", ");
 
 
         try {
@@ -272,37 +276,37 @@ const updateEmployee = async (req, res) => {
 // @Route     http://localhost:5000/api/employee/:id
 // @Access    Private
 const deleteEmployee = async (req, res) => {
-  try {
-    const _id = req.params.id;
+    try {
+        const _id = req.params.id;
 
-    if (!mongoose.Types.ObjectId.isValid(_id)) {
-      return res.status(400).json({ err: "Invalid ID format" });
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({ err: "Invalid ID format" });
+        }
+
+        // Find the employee to be deleted
+        const employee = await employeeModel.findById(_id);
+        if (!employee) {
+            return res.status(404).json({ err: "Employee not found" });
+        }
+
+        // Move the employee to the deletedEmployeeModel
+        await deletedEmployeeModel.create({
+            employeeId: employee.employeeId,
+            employeeName: employee.employeeName,
+            employeeEmail: employee.employeeEmail,
+            employeeSalary: employee.employeeSalary,
+            employeePassword: employee.employeePassword,
+            employeeRoles: employee.employeeRoles,
+        });
+
+        // Delete the employee from the employeeModel
+        await employeeModel.findByIdAndDelete(_id);
+
+        return res.status(200).json({ msg: "Employee deleted and archived successfully" });
+    } catch (error) {
+        console.log("Error Deleting Employee:", error);
+        return res.status(500).json({ err: "Internal Server Error" });
     }
-
-    // Find the employee to be deleted
-    const employee = await employeeModel.findById(_id);
-    if (!employee) {
-      return res.status(404).json({ err: "Employee not found" });
-    }
-
-    // Move the employee to the deletedEmployeeModel
-    await deletedEmployeeModel.create({
-      employeeId: employee.employeeId,
-      employeeName: employee.employeeName,
-      employeeEmail: employee.employeeEmail,
-      employeeSalary: employee.employeeSalary,
-      employeePassword: employee.employeePassword,
-      employeeRoles: employee.employeeRoles,
-    });
-
-    // Delete the employee from the employeeModel
-    await employeeModel.findByIdAndDelete(_id);
-
-    return res.status(200).json({ msg: "Employee deleted and archived successfully" });
-  } catch (error) {
-    console.log("Error Deleting Employee:", error);
-    return res.status(500).json({ err: "Internal Server Error" });
-  }
 };
 
 // @Request   DELETE
@@ -324,51 +328,96 @@ const deleteEmployeePermanently = async (req, res) => {
         return res.status(500).json({ err: "Internal Server Error", error: error.message })
     }
 }
-      
 
-const restoreEmployee = async (req, res) => { 
+
+// @Request   POST
+// @Route     http://localhost:5000/api/employee
+// @Access    Private
+const restoreEmployee = async (req, res) => {
     try {
-      const _id = req.params.id;
-  
-      // Validate ObjectId
-      if (!mongoose.Types.ObjectId.isValid(_id)) {
-        return res.status(400).json({ err: "Invalid Object Id" });
-      }
-  
-      // Find the deleted employee
-      const deletedEmployee = await deletedEmployeeModel.findById(_id);
-      if (!deletedEmployee) {
-        return res.status(404).json({ err: "Employee Not Found in Deleted Records" });
-      }
-  
-      // Check if an employee with the same employeeId already exists in the active employees
-      const existingEmployee = await employeeModel.findOne({ employeeId: deletedEmployee.employeeId });
-      if (existingEmployee) {
-        return res.status(409).json({ err: "Employee already exists in active records" });
-      }
-  
-      // Recreate the employee document in the active employees collection
-      const restoredEmployee = new employeeModel({
-        employeeId: deletedEmployee.employeeId,
-        employeeName: deletedEmployee.employeeName,
-        employeeEmail: deletedEmployee.employeeEmail,
-        employeeSalary: deletedEmployee.employeeSalary,
-        employeeRoles: deletedEmployee.employeeRoles,
-        employeePassword: deletedEmployee.employeePassword,
-      });
-  
-      await restoredEmployee.save();
-  
-      // Delete the employee from the deleted employees collection
-      await deletedEmployeeModel.findByIdAndDelete(_id);
-  
-      return res.status(200).json({ msg: "Employee Restored Successfully", restoredEmployee });
+        const _id = req.params.id;
+
+        // Validate ObjectId
+        if (!mongoose.Types.ObjectId.isValid(_id)) {
+            return res.status(400).json({ err: "Invalid Object Id" });
+        }
+
+        // Find the deleted employee
+        const deletedEmployee = await deletedEmployeeModel.findById(_id);
+        if (!deletedEmployee) {
+            return res.status(404).json({ err: "Employee Not Found in Deleted Records" });
+        }
+
+        // Check if an employee with the same employeeId already exists in the active employees
+        const existingEmployee = await employeeModel.findOne({ employeeId: deletedEmployee.employeeId });
+        if (existingEmployee) {
+            return res.status(409).json({ err: "Employee already exists in active records" });
+        }
+
+        // Recreate the employee document in the active employees collection
+        const restoredEmployee = new employeeModel({
+            employeeId: deletedEmployee.employeeId,
+            employeeName: deletedEmployee.employeeName,
+            employeeEmail: deletedEmployee.employeeEmail,
+            employeeSalary: deletedEmployee.employeeSalary,
+            employeeRoles: deletedEmployee.employeeRoles,
+            employeePassword: deletedEmployee.employeePassword,
+        });
+
+        await restoredEmployee.save();
+
+        // Delete the employee from the deleted employees collection
+        await deletedEmployeeModel.findByIdAndDelete(_id);
+
+        return res.status(200).json({ msg: "Employee Restored Successfully", restoredEmployee });
     } catch (error) {
-      console.error("Error Restoring Employee:", error.message);
-      return res.status(500).json({ err: "Internal Server Error", error: error.message });
+        console.error("Error Restoring Employee:", error.message);
+        return res.status(500).json({ err: "Internal Server Error", error: error.message });
     }
-  };
-  
+};
 
 
-module.exports = { createEmployee, getEmployee, getSingleEmployee, updateEmployee, deleteEmployee,getDeletedEmployee ,deleteEmployeePermanently,restoreEmployee};
+
+
+// @Request   POST
+// @Route     http://localhost:5000/api/employee/login
+// @Access    Private
+const forgotPasswordController = async () => {
+    const { employeeEmail } = req.body;
+    try {
+        const user = await employeeModel.finfOne({ employeeEmail });
+        if (!user) return res.status(400).json({ err: "Email not found" })
+
+        // Generate a unique reset token
+        const resetToken = crypto.randomBytes(32).toString("hex");
+
+        // set the token and expiration
+        user.resetPasswordToken  = resetToken;
+        user.resetPasswordExpires  = Date.now() + 3600000;  // 1 hour from now
+        await user.save();
+
+        
+
+    } catch (error) {
+        console.error("Error processing the request of Password reset email: ", error.message);
+        return res.status(500).json({ err: "Internal Server Error", error: error.message });
+    }
+}
+
+
+// @Request   POST
+// @Route     http://localhost:5000/api/employee/login
+// @Access    Private
+const resetPasswordController = async () => {
+    try {
+        const { employeePassword, ConfirmEmployeePassword } = req.body;
+
+    } catch (error) {
+        console.error("Error resetting the password: ", error.message);
+        return res.status(500).json({ err: "Internal Server Error", error: error.message });
+    }
+}
+
+
+
+module.exports = { createEmployee, getEmployee, getSingleEmployee, updateEmployee, deleteEmployee, getDeletedEmployee, deleteEmployeePermanently, restoreEmployee, forgotPasswordController, resetPasswordController };
